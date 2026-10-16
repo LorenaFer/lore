@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>¿Cuánto me conoces?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one calm column like a tide pool — hero, then the quiz card, then the ranking; owner's question editor at the bottom. */
+:root {
+  --sea-ground: #EAF5F2;      /* page: pale seafoam */
+  --sea-surface: #FBFEFD;     /* cards */
+  --sea-ink: #0F3243;         /* deep teal-navy text */
+  --sea-muted: #4F7180;       /* secondary text, blue-grey biased */
+  --sea-line: #CFE4E0;
+  --sea-blue: #1E6FB0;        /* ocean blue accent */
+  --sea-green: #23917A;       /* lagoon green accent */
+  --sea-mint: #C9EEDF;
+  --sea-sky: #D5E9F8;
+  --sea-glow-1: #BFE3F5;
+  --sea-glow-2: #C6EEDD;
+  --ok: #1F8A5C;
+  --ok-bg: #DDF4E8;
+  --bad: #B3473D;
+  --bad-bg: #FBE6E2;
+  --shadow: 0 1px 2px rgba(15,50,67,.06), 0 12px 32px -12px rgba(15,50,67,.18);
+
+  --f-display: "Young Serif", Georgia, "Times New Roman", serif;
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "DM Mono", ui-monospace, Menlo, monospace;
+
+  --s-xs: .8125rem; --s-sm: .9375rem; --s-md: 1.0625rem; --s-lg: 1.375rem; --s-xl: 2rem; --s-hero: clamp(2.6rem, 8vw, 4.6rem);
+  --r: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --sea-ground: #0A1B24; --sea-surface: #10293A; --sea-ink: #E2F2EF; --sea-muted: #94B6C2;
+    --sea-line: #1F4255; --sea-blue: #72B7EE; --sea-green: #5BCFA9; --sea-mint: #163F3A; --sea-sky: #143550;
+    --sea-glow-1: #123A55; --sea-glow-2: #0F3E36;
+    --ok: #6FDDA6; --ok-bg: #123A2C; --bad: #F2948A; --bad-bg: #3A1F1E;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 36px -14px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --sea-ground: #0A1B24; --sea-surface: #10293A; --sea-ink: #E2F2EF; --sea-muted: #94B6C2;
+  --sea-line: #1F4255; --sea-blue: #72B7EE; --sea-green: #5BCFA9; --sea-mint: #163F3A; --sea-sky: #143550;
+  --sea-glow-1: #123A55; --sea-glow-2: #0F3E36;
+  --ok: #6FDDA6; --ok-bg: #123A2C; --bad: #F2948A; --bad-bg: #3A1F1E;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 36px -14px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: light; -webkit-text-size-adjust: 100%; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body {
+  background:
+    radial-gradient(60rem 30rem at 10% -5%, var(--sea-glow-1), transparent 60%),
+    radial-gradient(50rem 30rem at 100% 10%, var(--sea-glow-2), transparent 60%),
+    var(--sea-ground);
+  background-attachment: fixed;
+  color: var(--sea-ink);
+  font-family: var(--f-body);
+  font-size: var(--s-md);
+  line-height: 1.55;
+  padding-block: 0 4rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 100%;
+  margin: 0;
+}
+.wrap { max-width: 44rem; margin: 0 auto; display: grid; gap: 2rem; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sea-blue); outline-offset: 2px; border-radius: 10px; }
+
+/* Hero */
+.hero { padding-top: 3.5rem; display: grid; gap: 1rem; }
+.eyebrow { font-family: var(--f-mono); font-size: var(--s-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--sea-green); }
+.hero h1 { font-size: var(--s-hero); line-height: 1.02; letter-spacing: -.01em; }
+.hero h1 .who { color: var(--sea-blue); font-style: italic; }
+.hero .intro { color: var(--sea-muted); max-width: 36rem; font-size: var(--s-md); }
+.facts { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip { font-family: var(--f-mono); font-size: var(--s-xs); padding: .35rem .75rem; border-radius: 999px; background: var(--sea-surface); border: 1px solid var(--sea-line); color: var(--sea-muted); font-variant-numeric: tabular-nums; }
+.chip b { color: var(--sea-ink); font-weight: 500; }
+
+/* Wave divider */
+.wave { display: block; width: 100%; height: 22px; color: var(--sea-green); opacity: .5; }
+
+/* Card */
+.card { background: var(--sea-surface); border: 1px solid var(--sea-line); border-radius: var(--r); box-shadow: var(--shadow); padding: clamp(1.25rem, 4vw, 2rem); display: grid; gap: 1.25rem; }
+.card h2 { font-size: var(--s-xl); line-height: 1.15; }
+.sub { color: var(--sea-muted); font-size: var(--s-sm); }
+
+/* Buttons */
+.btn { border: 0; cursor: pointer; border-radius: 999px; padding: .8rem 1.4rem; font-weight: 600; font-size: var(--s-sm); background: linear-gradient(120deg, var(--sea-blue), var(--sea-green)); color: #fff; transition: transform .15s ease, filter .15s ease; justify-self: start; }
+:root[data-theme="dark"] .btn { color: #06202A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { color: #06202A; } }
+.btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.ghost { background: transparent; color: var(--sea-blue); border: 1px solid var(--sea-line); }
+.btn.small { padding: .45rem .9rem; font-size: var(--s-xs); }
+.btn.danger { background: transparent; color: var(--bad); border: 1px solid var(--sea-line); }
+.row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+
+/* Fields */
+label.f { display: grid; gap: .4rem; font-size: var(--s-sm); font-weight: 600; }
+.input, textarea.input, select.input { width: 100%; border: 1.5px solid var(--sea-line); background: var(--sea-ground); border-radius: 12px; padding: .75rem .9rem; font-weight: 400; }
+.input:focus { outline: none; border-color: var(--sea-blue); box-shadow: 0 0 0 4px color-mix(in srgb, var(--sea-blue) 18%, transparent); }
+
+/* Quiz */
+.progress { display: flex; gap: .35rem; }
+.progress span { flex: 1; height: 6px; border-radius: 999px; background: var(--sea-line); transition: background .3s; }
+.progress span.done { background: var(--sea-green); }
+.progress span.now { background: var(--sea-blue); }
+.qmeta { font-family: var(--f-mono); font-size: var(--s-xs); color: var(--sea-muted); letter-spacing: .06em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.question { font-family: var(--f-display); font-size: var(--s-lg); line-height: 1.3; text-wrap: balance; }
+.options { display: grid; gap: .65rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.opt { text-align: left; cursor: pointer; border: 1.5px solid var(--sea-line); background: var(--sea-ground); border-radius: 14px; padding: .95rem 1.05rem; display: flex; gap: .75rem; align-items: center; font-weight: 500; transition: border-color .15s, background .15s, transform .15s; }
+.opt:hover { border-color: var(--sea-blue); transform: translateY(-1px); }
+.opt .letter { font-family: var(--f-mono); font-size: var(--s-xs); width: 1.75rem; height: 1.75rem; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--sea-sky); color: var(--sea-blue); }
+.opt.picked { border-color: var(--sea-green); background: var(--sea-mint); }
+.opt.picked .letter { background: var(--sea-green); color: var(--sea-surface); }
+
+/* Result */
+.result-head { display: grid; gap: .5rem; justify-items: start; }
+.bigscore { font-family: var(--f-display); font-size: clamp(3.5rem, 14vw, 5.5rem); line-height: 1; color: var(--sea-blue); font-variant-numeric: tabular-nums; }
+.bigscore small { font-size: .4em; color: var(--sea-muted); }
+.tier { font-weight: 700; color: var(--sea-green); font-size: var(--s-lg); }
+.review { display: grid; gap: .6rem; padding: 0; margin: 0; list-style: none; }
+.review li { border-radius: 12px; padding: .75rem .9rem; display: grid; gap: .2rem; font-size: var(--s-sm); border: 1px solid var(--sea-line); }
+.review li.ok { background: var(--ok-bg); }
+.review li.bad { background: var(--bad-bg); }
+.review .tag { font-family: var(--f-mono); font-size: var(--s-xs); text-transform: uppercase; letter-spacing: .08em; }
+.review li.ok .tag { color: var(--ok); }
+.review li.bad .tag { color: var(--bad); }
+.review .note { color: var(--sea-muted); font-style: italic; }
+
+/* Ranking */
+.leader { display: grid; gap: .25rem; padding: 1.1rem 1.25rem; border-radius: 14px; background: linear-gradient(120deg, var(--sea-sky), var(--sea-mint)); }
+.leader .eyebrow { color: var(--sea-blue); }
+.leader strong { font-family: var(--f-display); font-weight: 400; font-size: var(--s-xl); line-height: 1.1; overflow-wrap: anywhere; }
+.board { list-style: none; margin: 0; padding: 0; display: grid; }
+.board li { display: grid; gap: .8rem; padding: .8rem .25rem; border-bottom: 1px solid var(--sea-line); }
+.board .line { display: grid; grid-template-columns: 2.25rem 1fr auto; gap: .9rem; align-items: center; }
+.peek { border: 0; background: none; padding: 0; cursor: pointer; color: var(--sea-blue); font: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.detail { padding-left: 3.15rem; }
+@media (max-width: 480px) { .detail { padding-left: 0; } }
+.board li:last-child { border-bottom: 0; }
+.pos { font-family: var(--f-mono); font-size: var(--s-sm); width: 2.25rem; height: 2.25rem; border-radius: 50%; display: grid; place-items: center; background: var(--sea-ground); color: var(--sea-muted); font-variant-numeric: tabular-nums; }
+.board li:nth-child(1) .pos { background: var(--sea-blue); color: var(--sea-surface); }
+.board li:nth-child(2) .pos { background: var(--sea-green); color: var(--sea-surface); }
+.board li:nth-child(3) .pos { background: var(--sea-mint); color: var(--sea-green); }
+.pname { font-weight: 600; overflow-wrap: anywhere; }
+.pname .you { font-family: var(--f-mono); font-size: var(--s-xs); font-weight: 400; color: var(--sea-blue); margin-left: .4rem; }
+.pmeta { font-size: var(--s-xs); color: var(--sea-muted); }
+.pscore { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: var(--s-md); text-align: right; display: flex; gap: .6rem; align-items: center; }
+.bar { width: 4.5rem; height: 6px; border-radius: 999px; background: var(--sea-line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--sea-blue), var(--sea-green)); }
+.x { border: 0; background: none; cursor: pointer; color: var(--sea-muted); font-size: 1.1rem; padding: .2rem .4rem; }
+.x:hover { color: var(--bad); }
+
+.empty { text-align: center; padding: 1.5rem 1rem; color: var(--sea-muted); display: grid; gap: .5rem; justify-items: center; }
+.empty .bubble { width: 3rem; height: 3rem; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--sea-surface), var(--sea-sky) 60%, var(--sea-mint)); border: 1px solid var(--sea-line); }
+.notice { font-size: var(--s-sm); padding: .8rem 1rem; border-radius: 12px; background: var(--sea-sky); color: var(--sea-ink); }
+.notice.warn { background: var(--bad-bg); }
+
+/* Editor */
+.editor-q { border: 1px dashed var(--sea-line); border-radius: 14px; padding: 1rem; display: grid; gap: .75rem; }
+.editor-q .head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.opt-row { display: grid; grid-template-columns: auto 1fr auto; gap: .5rem; align-items: center; }
+.opt-row input[type="radio"] { width: 1.15rem; height: 1.15rem; accent-color: var(--sea-green); }
+.suggest { display: flex; flex-wrap: wrap; gap: .4rem; }
+.suggest button { border: 1px solid var(--sea-line); background: var(--sea-ground); border-radius: 999px; padding: .35rem .75rem; font-size: var(--s-xs); cursor: pointer; color: var(--sea-muted); }
+.suggest button:hover { color: var(--sea-blue); border-color: var(--sea-blue); }
+.toast { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--sea-ink); color: var(--sea-ground); padding: .7rem 1.2rem; border-radius: 999px; font-size: var(--s-sm); box-shadow: var(--shadow); z-index: 20; }
+
+/* Media options: palettes and photos */
+.options.media { grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); }
+.opt.media { flex-direction: column; align-items: stretch; padding: .6rem; gap: .55rem; position: relative; }
+.opt.media .letter { position: absolute; top: .9rem; left: .9rem; z-index: 1; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.opt.media .cap { font-size: var(--s-sm); padding: 0 .2rem .15rem; text-align: center; }
+.swatches { display: flex; height: 4.5rem; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.swatches span { flex: 1; }
+.swatches.mini { height: 1.1rem; width: 6rem; border-radius: 5px; display: inline-flex; vertical-align: middle; }
+.photo { width: 100%; max-width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--sea-sky); display: block; }
+.photo.mini { width: 2.5rem; height: 2.5rem; border-radius: 6px; display: inline-block; vertical-align: middle; }
+.photo.ph { display: grid; place-items: center; background: linear-gradient(145deg, var(--sea-sky), var(--sea-mint)); color: var(--sea-blue); font-family: var(--f-display); font-size: 2.2rem; }
+.photo.ph.mini { font-size: .9rem; }
+.photo.empty { display: grid; place-items: center; color: var(--sea-muted); font-size: var(--s-xs); }
+.ans { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.pts { font-family: var(--f-mono); font-size: var(--s-xs); padding: .2rem .55rem; border-radius: 999px; background: var(--sea-mint); color: var(--sea-green); font-variant-numeric: tabular-nums; }
+.req { color: var(--sea-blue); font-weight: 500; font-size: var(--s-xs); font-family: var(--f-mono); }
+
+/* Editor extras */
+.ed-grid { display: grid; grid-template-columns: 1fr 7rem; gap: .75rem; }
+@media (max-width: 480px) { .ed-grid { grid-template-columns: 1fr; } }
+.opt-edit { display: grid; grid-template-columns: auto 1fr; gap: .6rem; align-items: start; padding: .6rem; border-radius: 12px; background: var(--sea-ground); }
+.opt-edit > input[type="checkbox"] { width: 1.15rem; height: 1.15rem; accent-color: var(--sea-green); margin-top: .8rem; }
+.opt-edit .body { display: grid; gap: .5rem; min-width: 0; }
+.colors-edit { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.colors-edit input[type="color"] { width: 2.4rem; height: 2.4rem; padding: 0; border: 1.5px solid var(--sea-line); border-radius: 8px; background: none; cursor: pointer; }
+.img-edit { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.img-edit .photo { width: 4.5rem; }
+.correct-tag { font-family: var(--f-mono); font-size: var(--s-xs); color: var(--sea-green); }
+
+.wall { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.wish { margin: 0; padding: 1rem 1.1rem; border-radius: 14px; background: linear-gradient(150deg, var(--sea-sky), var(--sea-mint)); display: grid; gap: .5rem; align-content: start; }
+.wish p { font-family: var(--f-display); font-size: var(--s-md); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wish cite { font-style: normal; font-size: var(--s-xs); font-family: var(--f-mono); color: var(--sea-blue); letter-spacing: .04em; }
+.mywish { border-left: 3px solid var(--sea-green); padding: .4rem 0 .4rem .9rem; font-family: var(--f-display); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Owner's view switch */
+.switch { position: sticky; top: calc(env(safe-area-inset-top, 0px) + .75rem); z-index: 5; justify-self: center; margin-top: 1.25rem; display: flex; gap: .25rem; padding: .3rem; border-radius: 999px; background: color-mix(in srgb, var(--sea-surface) 85%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--sea-line); box-shadow: var(--shadow); }
+.switch[hidden] { display: none; }
+.switch button { border: 0; background: none; cursor: pointer; border-radius: 999px; padding: .5rem 1.1rem; font-weight: 600; font-size: var(--s-sm); color: var(--sea-muted); }
+.switch button[aria-pressed="true"] { background: linear-gradient(120deg, var(--sea-blue), var(--sea-green)); color: var(--sea-surface); }
+.switch:not([hidden]) + .hero { padding-top: 1.5rem; }
+.foot { display: flex; justify-content: center; font-size: var(--s-xs); color: var(--sea-muted); }
+.panel-note { font-size: var(--s-sm); color: var(--sea-muted); }
+
+.fade-in { animation: rise .35s ease both; }
+@keyframes rise { from { transform: translateY(6px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media (max-width: 480px) { .bar { display: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <nav class="switch" id="viewSwitch" hidden aria-label="Cambiar de vista">
+    <button id="tabPanel" data-view="panel">Mi panel</button>
+    <button id="tabPlayer" data-view="player">Vista de amigos</button>
+  </nav>
+  <header class="hero">
+    <span class="eyebrow" id="eyebrow">Un quiz para mis amigos</span>
+    <h1 id="title">¿Cuánto me conoces, de verdad?</h1>
+    <p class="intro" id="intro">Responde las preguntas sobre mí. Al final verás tu puntaje y quién de todos me conoce mejor.</p>
+    <div class="facts">
+      <span class="chip"><b id="nQ">–</b> preguntas</span>
+      <span class="chip"><b id="nP">0</b> amigos jugaron</span>
+      <span class="chip" id="topChip">Récord: <b id="top">–</b></span>
+    </div>
+  </header>
+
+  <svg class="wave" viewBox="0 0 400 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 11 Q 25 0 50 11 T 100 11 T 150 11 T 200 11 T 250 11 T 300 11 T 350 11 T 400 11" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+
+  <section class="card" id="play" aria-live="polite"></section>
+
+  <section class="card" id="ranking">
+    <h2>Ranking</h2>
+    <div id="rankBody"></div>
+  </section>
+
+  <section class="card" id="wishes" hidden>
+    <div style="display:grid;gap:.4rem">
+      <h2>Deseos de cumpleaños</h2>
+      <p class="sub">Solo tú puedes leerlos. Tus amigos no ven esta sección.</p>
+    </div>
+    <div id="wishBody"></div>
+  </section>
+
+  <section class="card" id="editor" hidden></section>
+  <footer class="foot"><button class="peek" id="ownerBtn" hidden>Soy Lore · entrar a mi panel</button></footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { firebaseConfig, OWNER_EMAIL } from "./config.js";
+
+const app = initializeApp(firebaseConfig);
+const fs = getFirestore(app);
+const auth = getAuth(app);
+
+// Small wrapper with the same shape the page already uses (doc/collection, get/set/onSnapshot).
+const wrapDoc = (s) => ({ id: s.id, exists: s.exists(), data: () => s.data() });
+const firebaseDb = {
+  doc(p) {
+    const r = doc(fs, p);
+    return {
+      get: async () => wrapDoc(await getDoc(r)),
+      set: (d) => setDoc(r, d),
+      update: (d) => updateDoc(r, d),
+      delete: () => deleteDoc(r),
+      onSnapshot: (next, err) => onSnapshot(r, (s) => next(wrapDoc(s)), err),
+    };
+  },
+  collection(p) {
+    const r = collection(fs, p);
+    return { onSnapshot: (next, err) => onSnapshot(r, (s) => next({ docs: s.docs.map(wrapDoc) }), err) };
+  },
+};
+
+const LETTERS = "ABCDEF";
+const MAX_OPTS = 6;
+const KINDS = { text: "Texto", colors: "Paleta de colores", image: "Fotos" };
+const SUGGESTIONS = [
+  { q: "¿Cuál es mi paleta de colores favorita?", kind: "colors", points: 2 },
+  { q: "Si tuviera un festival de música, ¿qué 3 artistas estarían en el cartel?", kind: "image", points: 3, slots: 6 },
+  { q: "¿Cuál es mi ciudad favorita del mundo?", kind: "image", points: 2 },
+  { q: "¿Playa, montaña, ciudad o campo?", kind: "image", points: 1 },
+  { q: "¿Cuál es mi comida de confort?", kind: "image", points: 1 },
+  { q: "¿Qué pido siempre en una cafetería?", kind: "text", points: 1 },
+  { q: "¿Qué serie podría ver mil veces?", kind: "image", points: 2 },
+  { q: "¿Qué canción no puede faltar en mi playlist?", kind: "text", points: 2 },
+  { q: "¿Qué tablero de Pinterest es más yo?", kind: "image", points: 3 },
+  { q: "¿Cuál es mi manía más rara?", kind: "text", points: 3 },
+  { q: "¿Cuál sería mi trabajo soñado?", kind: "text", points: 2 },
+  { q: "¿Qué flor me representa?", kind: "image", points: 1 },
+];
+
+const S = {
+  db: null, user: null, uid: null, isOwner: false,
+  quiz: null,           // {owner, intro, questions:[{id,q,kind,points,options:[{text,colors,img}],correct,note}]}
+  results: [],          // [{id, name, answers, at}]
+  images: {},           // image id -> data URL
+  wishes: {},           // player id -> {name, wish, at}; only the owner can read these
+  view: "panel",        // owner only: "panel" | "player"
+  profiles: {},
+  loaded: { quiz: false, results: false },
+  step: "intro", name: "", idx: 0, answers: {}, wish: "",
+  saveError: "",
+  draft: null, dirty: false,
+};
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v === true) n.setAttribute(k, "");
+    else if (v !== false && v != null) n.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return n;
+};
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2800); }
+
+/* ---------- model ---------- */
+const normOpt = (o) => typeof o === "string" ? { text: o, colors: [], img: "" } : { text: o?.text || "", colors: Array.isArray(o?.colors) ? o.colors : [], img: o?.img || "" };
+// A photo option still counts with only a name: it shows a placeholder tile until the photo is uploaded.
+const hasContent = (o, kind) => kind === "colors" ? o.colors.length > 0 : kind === "image" ? !!o.img || !!o.text.trim() : !!o.text.trim();
+function normQ(q) {
+  const kind = KINDS[q.kind] ? q.kind : "text";
+  const options = [...(q.options || []).map(normOpt), ...Array(MAX_OPTS).fill(0).map(() => normOpt(""))].slice(0, MAX_OPTS);
+  let correct = (Array.isArray(q.correct) ? q.correct : [q.correct ?? 0]).filter(i => Number.isInteger(i) && i >= 0 && i < MAX_OPTS);
+  correct = [...new Set(correct)].sort((a, b) => a - b);
+  if (!correct.length) correct = [0];
+  return { id: q.id, q: q.q || "", kind, points: Math.max(1, Math.min(100, Number(q.points) || 1)), options, correct, note: q.note || "" };
+}
+const questions = () => (S.quiz?.questions || []).map(normQ).filter(q => q.q && q.options.filter(o => hasContent(o, q.kind)).length >= 2);
+const totalPoints = () => questions().reduce((s, q) => s + q.points, 0);
+const picks = (a) => Array.isArray(a) ? a : a == null ? [] : [a];
+const round1 = (n) => Math.round(n * 10) / 10;
+const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ",");
+// With several correct answers, the question's points are split evenly per hit.
+function qScore(q, a) { const hits = picks(a).filter(i => q.correct.includes(i)).length; return round1(q.points * hits / q.correct.length); }
+function scoreOf(answers) { let s = 0; for (const q of questions()) s += qScore(q, answers?.[q.id]); return round1(s); }
+function tierOf(score, total) {
+  const p = total ? score / total : 0;
+  if (p === 1) return "Alma gemela. Me conoces más que yo.";
+  if (p >= .8) return "Mejor amistad oficial";
+  if (p >= .6) return "Me conoces bastante bien";
+  if (p >= .4) return "Vamos bien, nos falta un café";
+  return "¿Nos conocemos? Hay que salir más";
+}
+function ranked() {
+  return S.results
+    .map(r => ({ ...r, score: scoreOf(r.answers) }))
+    .sort((a, b) => b.score - a.score || (a.at || 0) - (b.at || 0));
+}
+function displayName(r) { return r.name || "Alguien"; }
+function myResult() { return S.uid ? S.results.find(r => r.id === S.uid) : null; }
+const ptsLabel = (n) => `${fmt(n)} ${n === 1 ? "punto" : "puntos"}`;
+
+/* ---------- option views ---------- */
+function swatches(colors, mini) { return el("span", { class: "swatches" + (mini ? " mini" : ""), "aria-hidden": "true" }, colors.map(c => el("span", { style: `background:${c}` }))); }
+function photo(id, mini, alt) {
+  if (!id) {
+    const initials = (alt || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+    return el("span", { class: "photo ph" + (mini ? " mini" : ""), role: "img", "aria-label": alt || "sin foto" }, initials);
+  }
+  const src = S.images[id];
+  return src ? el("img", { class: "photo" + (mini ? " mini" : ""), src, alt: alt || "", loading: "lazy" })
+             : el("span", { class: "photo empty" + (mini ? " mini" : ""), role: "img", "aria-label": alt || "foto" }, mini ? "" : "cargando…");
+}
+// compact answer label for the results review
+function answerView(q, o) {
+  if (!o) return el("span", {}, "sin responder");
+  if (q.kind === "colors") return el("span", { class: "ans" }, swatches(o.colors, true), o.text || null);
+  if (q.kind === "image") return el("span", { class: "ans" }, photo(o.img, true, o.text), o.text || null);
+  return el("span", {}, o.text);
+}
+
+/* ---------- header ---------- */
+function renderHeader() {
+  const owner = S.quiz?.owner || "Lore";
+  const t = $("title"); t.textContent = "";
+  t.append("¿Cuánto conoces a ", el("span", { class: "who" }, owner), "?");
+  $("intro").textContent = S.quiz?.intro || "Responde las preguntas sobre mí. Al final verás tu puntaje y quién de todos me conoce mejor.";
+  $("eyebrow").textContent = S.isOwner && S.view === "panel" ? "Tu panel · solo tú ves esto" : `Un quiz de ${owner} para sus amigos`;
+  document.title = `¿Cuánto conoces a ${owner}?`;
+  $("nQ").textContent = S.loaded.quiz ? questions().length : "–";
+  $("nP").textContent = S.results.length;
+  const r = ranked();
+  $("top").textContent = r.length ? `${fmt(r[0].score)}/${totalPoints()} pts` : "–";
+}
+
+/* ---------- play ---------- */
+function renderPlay() {
+  const box = $("play"); box.textContent = "";
+  const qs = questions();
+
+  if (!S.db) {
+    box.append(el("h2", {}, "Abriendo el quiz…"),
+      el("p", { class: "sub" }, S.authError ? "No pudimos conectar con el quiz. Revisa tu internet y recarga la página." : "Un segundito…"));
+    return;
+  }
+  if (!S.loaded.quiz) { box.append(el("h2", {}, "Cargando preguntas…")); return; }
+  if (!qs.length) {
+    box.append(el("div", { class: "empty" }, el("div", { class: "bubble" }),
+      el("h2", {}, S.isOwner ? "Todavía no hay preguntas" : "Las preguntas vienen en camino"),
+      el("p", {}, S.isOwner ? "Escribe tus preguntas abajo, en «Mis preguntas». Apenas guardes, tus amigos podrán jugar." : "Vuelve en un ratito, se están escribiendo las preguntas.")));
+    return;
+  }
+
+  const mine = myResult();
+  if (mine && S.step !== "done") { S.answers = mine.answers || {}; S.name = mine.name || ""; S.wish = mine.wish || ""; S.step = "done"; }
+
+  if (S.step === "intro") {
+    const input = el("input", { class: "input", id: "nameInput", maxlength: "40", required: true, placeholder: "Ej. Sofi, Juanpa, la prima Ale…", value: S.name, autocomplete: "nickname" });
+    const start = el("button", { class: "btn", id: "startBtn", disabled: !S.name.trim() }, "Empezar el quiz");
+    const hint = el("p", { class: "sub", id: "nameHint" }, S.name.trim() ? "" : "Escribe tu nombre para poder empezar.");
+    input.addEventListener("input", () => { S.name = input.value; start.disabled = !S.name.trim(); hint.textContent = S.name.trim() ? "" : "Escribe tu nombre para poder empezar."; });
+    input.addEventListener("keydown", e => { if (e.key === "Enter" && S.name.trim()) start.click(); });
+    start.addEventListener("click", () => { if (!S.name.trim()) return; S.step = "q"; S.idx = 0; renderPlay(); });
+    box.append(
+      el("h2", {}, "¿Listo para jugar?"),
+      el("p", { class: "sub" }, `${qs.length} preguntas de selección múltiple, ${totalPoints()} puntos en juego. Cada pregunta vale distinto y solo tienes un intento. Al final me dejas un deseo de cumpleaños.`),
+      el("label", { class: "f", for: "nameInput" }, el("span", {}, "Tu nombre para el ranking ", el("span", { class: "req" }, "obligatorio")), input),
+      hint, start);
+    return;
+  }
+
+  if (S.step === "q") {
+    const q = qs[S.idx];
+    const media = q.kind !== "text";
+    const need = q.correct.length, multi = need > 1, chosen = picks(S.answers[q.id]);
+    const prog = el("div", { class: "progress", "aria-hidden": "true" },
+      qs.map((_, i) => el("span", { class: i < S.idx ? "done" : i === S.idx ? "now" : "" })), el("span", {}));
+    const opts = el("div", { class: "options" + (media ? " media" : ""), role: "group", "aria-label": "Opciones" },
+      q.options.map((o, i) => {
+        if (!hasContent(o, q.kind)) return null;
+        const label = o.text || (q.kind === "colors" ? `Paleta ${LETTERS[i]}` : `Foto ${LETTERS[i]}`);
+        const body = q.kind === "colors" ? [swatches(o.colors), o.text ? el("span", { class: "cap" }, o.text) : null]
+                   : q.kind === "image" ? [photo(o.img, false, label), o.text ? el("span", { class: "cap" }, o.text) : null]
+                   : [el("span", {}, o.text)];
+        return el("button", {
+          class: "opt" + (media ? " media" : "") + (chosen.includes(i) ? " picked" : ""), id: `opt-${q.id}-${i}`,
+          "aria-label": media ? `Opción ${LETTERS[i]}: ${label}` : null,
+          "aria-pressed": multi ? String(chosen.includes(i)) : null,
+          onclick: () => multi ? toggle(q, i) : choose(q, i)
+        }, el("span", { class: "letter" }, LETTERS[i]), ...body);
+      }));
+    const back = S.idx > 0 ? el("button", { class: "btn ghost small", onclick: () => { S.idx--; renderPlay(); } }, "← Anterior") : null;
+    const next = multi ? el("button", { class: "btn", id: "nextBtn", disabled: chosen.length !== need, onclick: advance }, S.idx < qs.length - 1 ? "Siguiente" : "Continuar") : null;
+    box.append(prog,
+      el("div", { class: "fade-in", style: "display:grid;gap:1rem" },
+        el("div", { class: "row", style: "justify-content:space-between" },
+          el("span", { class: "qmeta" }, `Pregunta ${S.idx + 1} de ${qs.length}`),
+          el("span", { class: "pts" }, multi ? `vale ${ptsLabel(q.points)} · ${ptsLabel(round1(q.points / need))} por acierto` : `vale ${ptsLabel(q.points)}`)),
+        el("p", { class: "question" }, q.q),
+        multi ? el("p", { class: "sub" }, `Elige ${need} opciones · llevas ${chosen.length} de ${need}`) : null,
+        opts),
+      back || next ? el("div", { class: "row" }, back, next) : null);
+    return;
+  }
+
+  if (S.step === "wish") {
+    const prog = el("div", { class: "progress", "aria-hidden": "true" },
+      qs.map(() => el("span", { class: "done" })), el("span", { class: "now" }));
+    const ta = el("textarea", { class: "input", id: "wishInput", rows: "4", maxlength: "600", placeholder: "Escribe aquí tu deseo, una anécdota o lo que quieras decirme…" }, S.wish);
+    const send = el("button", { class: "btn", id: "sendBtn", disabled: !S.wish.trim() }, "Enviar y ver mi puntaje");
+    ta.addEventListener("input", () => { S.wish = ta.value; send.disabled = !S.wish.trim(); });
+    send.addEventListener("click", async () => { if (!S.wish.trim()) return; S.step = "done"; renderPlay(); await submit(); });
+    box.append(prog,
+      el("div", { class: "fade-in", style: "display:grid;gap:1rem" },
+        el("div", { class: "row", style: "justify-content:space-between" },
+          el("span", { class: "qmeta" }, "Última pregunta"),
+          el("span", { class: "pts" }, "no da puntos, da amor")),
+        el("label", { class: "question", for: "wishInput" }, "¿Qué me deseas este cumpleaños?"),
+        ta,
+        el("div", { class: "row" },
+          el("button", { class: "btn ghost small", onclick: () => { S.step = "q"; S.idx = qs.length - 1; renderPlay(); } }, "← Anterior"),
+          send)));
+    return;
+  }
+
+  // done
+  // Players see only their score; which answers were right stays in the owner's panel.
+  const total = totalPoints(), sc = scoreOf(S.answers);
+  const pos = ranked().findIndex(r => r.id === S.uid) + 1;
+  box.append(
+    el("div", { class: "result-head fade-in" },
+      el("span", { class: "eyebrow" }, `Resultado de ${S.name || "tu intento"}`),
+      el("div", { class: "bigscore" }, fmt(sc), el("small", {}, ` / ${total} pts`)),
+      el("span", { class: "tier" }, tierOf(sc, total)),
+      pos ? el("p", { class: "sub" }, `Vas en el puesto ${pos} de ${S.results.length}.`) : null),
+    S.saveError ? el("p", { class: "notice warn" }, S.saveError) : null,
+    el("p", { class: "notice" }, `Tus respuestas quedaron guardadas. En cuáles acertaste es un secreto que solo ${S.quiz?.owner || "Lore"} conoce.`),
+    S.wish ? el("div", { style: "display:grid;gap:.4rem" }, el("span", { class: "eyebrow" }, "Tu deseo de cumpleaños"), el("p", { class: "mywish" }, S.wish)) : null);
+}
+
+// Owner-only breakdown of one player's answers.
+function buildReview(answers) {
+  const many = (q, idxs) => idxs.length ? el("span", { class: "ans" }, idxs.map((i, k) => [k ? " · " : null, answerView(q, q.options[i])])) : answerView(q, null);
+  return el("ul", { class: "review" }, questions().map(q => {
+    const a = picks(answers?.[q.id]), got = qScore(q, a), full = got === q.points;
+    const tag = full ? `Correcto · +${fmt(got)}` : got > 0 ? `Casi · ${fmt(got)} de ${q.points}` : `Falló · 0 de ${q.points}`;
+    const plural = q.correct.length > 1;
+    return el("li", { class: full ? "ok" : "bad" },
+      el("span", { class: "tag" }, tag),
+      el("strong", {}, q.q),
+      full ? el("span", { class: "ans" }, "Respondió: ", many(q, a))
+           : el("span", { class: "ans" }, plural ? "Eligió: " : "Respondió: ", many(q, a), plural ? " · Las correctas: " : " · La correcta: ", many(q, q.correct)),
+      q.note ? el("span", { class: "note" }, q.note) : null);
+  }));
+}
+
+function toggle(q, i) {
+  const cur = picks(S.answers[q.id]);
+  if (cur.includes(i)) S.answers = { ...S.answers, [q.id]: cur.filter(x => x !== i) };
+  else if (cur.length < q.correct.length) S.answers = { ...S.answers, [q.id]: [...cur, i] };
+  else { toast(`Solo puedes elegir ${q.correct.length}. Quita una para cambiarla.`); return; }
+  renderPlay();
+}
+function choose(q, i) {
+  S.answers = { ...S.answers, [q.id]: i };
+  advance();
+}
+function advance() {
+  const qs = questions();
+  if (S.idx < qs.length - 1) { S.idx++; renderPlay(); return; }
+  S.step = "wish"; renderPlay();
+}
+
+async function submit() {
+  const id = S.uid;
+  const name = S.name.trim().slice(0, 40), wish = S.wish.trim().slice(0, 600), at = Date.now();
+  try {
+    await S.db.doc("results/" + id).set({ name, answers: S.answers, at });
+    S.saveError = "";
+    toast("Resultado guardado en el ranking");
+  } catch (e) {
+    S.saveError = e?.code === "permission-denied"
+      ? "Ya habías jugado desde este dispositivo, así que guardamos tu primer intento."
+      : "No pudimos guardar tu resultado. Revisa tu internet y recarga la página para intentarlo de nuevo.";
+  }
+  try { await S.db.doc("wishes/" + id).set({ name, wish, at }); } catch {}
+  renderPlay();
+}
+
+/* ---------- ranking ---------- */
+function renderWishes() {
+  const box = $("wishBody"); box.textContent = "";
+  const byId = {};
+  for (const r of S.results) if (r.wish) byId[r.id] = r;          // fallback: wish saved with the result
+  for (const [id, w] of Object.entries(S.wishes)) if (w.wish) byId[id] = { id, ...w };
+  const ws = Object.values(byId).sort((a, b) => (b.at || 0) - (a.at || 0));
+  if (!ws.length) {
+    box.append(el("div", { class: "empty" }, el("div", { class: "bubble" }),
+      el("p", {}, "Aquí aparecen los deseos que me dejan al terminar el quiz.")));
+    return;
+  }
+  box.append(el("div", { class: "wall" }, ws.map(r =>
+    el("figure", { class: "wish" }, el("p", {}, r.wish), el("cite", {}, "— " + displayName(r))))));
+}
+function renderRanking() {
+  renderWishes();
+  const box = $("rankBody"); box.textContent = "";
+  const r = ranked(), total = totalPoints();
+  if (!r.length) {
+    box.append(el("div", { class: "empty" }, el("div", { class: "bubble" }),
+      el("p", {}, "Nadie ha jugado todavía. Quien termine primero aparece aquí.")));
+    return;
+  }
+  const best = r[0];
+  const tied = r.filter(x => x.score === best.score);
+  box.append(el("div", { class: "leader" },
+    el("span", { class: "eyebrow" }, tied.length > 1 ? "Empate en el primer lugar" : "Quien mejor me conoce"),
+    el("strong", {}, tied.length > 1 ? tied.map(displayName).join(" y ") : displayName(best)),
+    el("span", { class: "sub" }, `${fmt(best.score)} de ${total} puntos`)));
+  const panel = S.isOwner && S.view === "panel";
+  box.append(el("ol", { class: "board" }, r.map((x, i) => {
+    const open = panel && S.openRow === x.id;
+    return el("li", {},
+      el("div", { class: "line" },
+        el("span", { class: "pos" }, i + 1),
+        el("div", {},
+          el("div", { class: "pname" }, displayName(x), x.id === S.uid ? el("span", { class: "you" }, "tú") : null),
+          el("div", { class: "pmeta" }, x.at ? new Date(x.at).toLocaleDateString("es", { day: "numeric", month: "short" }) : "",
+            panel ? [x.at ? " · " : null, el("button", { class: "peek", id: `peek-${x.id}`, "aria-expanded": String(open), onclick: () => { S.openRow = open ? null : x.id; renderRanking(); } }, open ? "Ocultar respuestas" : "Ver respuestas")] : null)),
+        el("div", { class: "pscore" },
+          el("span", { class: "bar", "aria-hidden": "true" }, el("i", { style: `width:${total ? (x.score / total) * 100 : 0}%` })),
+          `${fmt(x.score)} pts`,
+          panel ? el("button", { class: "x", title: "Borrar este resultado", "aria-label": `Borrar resultado de ${displayName(x)}`, onclick: () => removeResult(x) }, "×") : null)),
+      open ? el("div", { class: "detail fade-in" }, buildReview(x.answers)) : null);
+  })));
+}
+const pendingDelete = new Set();
+async function removeResult(x) {
+  if (!pendingDelete.has(x.id)) { pendingDelete.add(x.id); toast(`Toca × otra vez para borrar a ${displayName(x)}`); setTimeout(() => pendingDelete.delete(x.id), 3000); return; }
+  pendingDelete.delete(x.id);
+  try { await S.db.doc("results/" + x.id).delete(); toast("Resultado borrado"); } catch { toast("No se pudo borrar. Intenta de nuevo."); }
+}
+
+/* ---------- photos: shrink in the browser, store as one db doc each ---------- */
+function shrinkImage(file, max = 520, quality = .78) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+    img.src = url;
+  });
+}
+async function uploadPhoto(file, opt) {
+  if (!file || !file.type.startsWith("image/")) { toast("Ese archivo no es una imagen. Elige un JPG, PNG o WEBP."); return; }
+  toast("Subiendo foto…");
+  try {
+    const data = await shrinkImage(file);
+    const id = "img" + Math.random().toString(36).slice(2, 10);
+    await S.db.doc("images/" + id).set({ data });
+    S.images = { ...S.images, [id]: data };
+    opt.img = id;
+    S.dirty = true; renderEditor();
+    toast("Foto lista. Recuerda guardar las preguntas.");
+  } catch (e) {
+    toast(e?.code === "quota_exceeded" ? "Ya no cabe otra foto. Quita alguna que no uses." : "No se pudo subir la foto. Prueba con otra imagen.");
+  }
+}
+
+/* ---------- editor (owner only) ---------- */
+const newQ = (s = {}) => normQ({ id: "q" + Math.random().toString(36).slice(2, 8), q: s.q || "", kind: s.kind || "text", points: s.points || 1, options: [] });
+function ensureDraft() {
+  if (S.draft && S.dirty) return;
+  const src = S.quiz || {};
+  S.draft = { owner: src.owner || "Lore", intro: src.intro || "", questions: (src.questions || []).map(normQ) };
+}
+function optionEditor(q, o, oi, mark) {
+  const isRight = q.correct.includes(oi);
+  const radio = el("input", { type: "checkbox", id: `ed-c-${q.id}-${oi}`, checked: isRight, "aria-label": `Marcar opción ${LETTERS[oi]} como correcta` });
+  radio.addEventListener("change", () => {
+    if (radio.checked) q.correct = [...q.correct, oi].sort((a, b) => a - b);
+    else if (q.correct.length > 1) q.correct = q.correct.filter(x => x !== oi);
+    else { radio.checked = true; toast("Cada pregunta necesita al menos una respuesta correcta."); return; }
+    mark(); renderEditor();
+  });
+  const optional = oi > 1 ? " (opcional)" : "";
+  const textIn = el("input", { class: "input", id: `ed-o-${q.id}-${oi}`, value: o.text,
+    placeholder: q.kind === "text" ? `Opción ${LETTERS[oi]}${optional}` : q.kind === "colors" ? "Nombre de la paleta (opcional)" : "Nombre, por ejemplo la banda (opcional)" });
+  textIn.addEventListener("input", () => { o.text = textIn.value; mark(); });
+  const body = [];
+  if (q.kind === "colors") {
+    const row = el("div", { class: "colors-edit" }, o.colors.map((c, ci) => {
+      const ci_ = el("input", { type: "color", id: `ed-col-${q.id}-${oi}-${ci}`, value: c, "aria-label": `Color ${ci + 1}` });
+      ci_.addEventListener("input", () => { o.colors[ci] = ci_.value; mark(); });
+      return ci_;
+    }),
+      o.colors.length < 6 ? el("button", { class: "btn ghost small", onclick: () => { o.colors.push(["#7FC8E8", "#9ADBC0", "#2E6FA8", "#CFEFE4", "#1E8A74", "#BFD9F2"][o.colors.length]); mark(); renderEditor(); } }, "+ color") : null,
+      o.colors.length ? el("button", { class: "btn danger small", onclick: () => { o.colors.pop(); mark(); renderEditor(); } }, "− color") : null);
+    body.push(el("span", { class: "correct-tag" }, `Paleta ${LETTERS[oi]}${optional}`), row, textIn);
+  } else if (q.kind === "image") {
+    const file = el("input", { type: "file", accept: "image/*", id: `ed-f-${q.id}-${oi}`, class: "sub" });
+    file.addEventListener("change", () => uploadPhoto(file.files[0], o));
+    body.push(el("span", { class: "correct-tag" }, `Foto ${LETTERS[oi]}${optional}`),
+      el("div", { class: "img-edit" }, o.img ? photo(o.img, false, o.text) : null, file,
+        o.img ? el("button", { class: "btn danger small", onclick: () => { o.img = ""; mark(); renderEditor(); } }, "Quitar foto") : null),
+      textIn);
+  } else {
+    body.push(textIn);
+  }
+  if (isRight) body.push(el("span", { class: "correct-tag" }, "✓ Respuesta correcta"));
+  return el("div", { class: "opt-edit" }, radio, el("div", { class: "body" }, body));
+}
+function renderEditor() {
+  const box = $("editor");
+  box.hidden = !S.isOwner || !S.db || S.view !== "panel";
+  if (box.hidden) return;
+  ensureDraft();
+  const d = S.draft;
+  const focusId = document.activeElement?.id;
+  box.textContent = "";
+  const mark = () => { S.dirty = true; saveBtn.disabled = false; };
+
+  const owner = el("input", { class: "input", id: "ed-owner", value: d.owner, maxlength: "30" });
+  owner.addEventListener("input", () => { d.owner = owner.value; mark(); });
+  const intro = el("textarea", { class: "input", id: "ed-intro", rows: "2", placeholder: "Responde las preguntas sobre mí. Al final verás tu puntaje y quién de todos me conoce mejor." }, d.intro);
+  intro.addEventListener("input", () => { d.intro = intro.value; mark(); });
+
+  const list = el("div", { style: "display:grid;gap:1rem" }, d.questions.map((q, qi) => {
+    const qIn = el("input", { class: "input", id: `ed-q-${q.id}`, value: q.q, placeholder: "Escribe la pregunta" });
+    qIn.addEventListener("input", () => { q.q = qIn.value; mark(); });
+    const kind = el("select", { class: "input", id: `ed-k-${q.id}`, "aria-label": "Tipo de opciones" },
+      Object.entries(KINDS).map(([k, v]) => el("option", { value: k, selected: q.kind === k }, v)));
+    kind.addEventListener("change", () => {
+      q.kind = kind.value;
+      if (q.kind === "colors") q.options.forEach((o, i) => { if (!o.colors.length && i < 2) o.colors = ["#7FC8E8", "#9ADBC0", "#2E6FA8"]; });
+      mark(); renderEditor();
+    });
+    const pts = el("input", { class: "input", id: `ed-p-${q.id}`, type: "number", min: "1", max: "100", value: q.points, inputmode: "numeric" });
+    pts.addEventListener("input", () => { q.points = Math.max(1, Math.min(100, parseInt(pts.value, 10) || 1)); mark(); });
+    const note = el("input", { class: "input", id: `ed-n-${q.id}`, value: q.note || "", placeholder: "Dato curioso para tu panel (opcional; tus amigos no lo ven)" });
+    note.addEventListener("input", () => { q.note = note.value; mark(); });
+    const del = el("button", { class: "btn danger small", onclick: () => { d.questions.splice(qi, 1); mark(); renderEditor(); } }, "Quitar");
+    const lastFilled = q.options.reduce((m, o, i) => hasContent(o, q.kind) || o.text ? i + 1 : m, 0);
+    const shown = Math.min(MAX_OPTS, Math.max(4, q._slots || 0, lastFilled, ...q.correct.map(i => i + 1)));
+    const up = qi > 0 ? el("button", { class: "btn ghost small", "aria-label": "Subir pregunta", onclick: () => { [d.questions[qi - 1], d.questions[qi]] = [d.questions[qi], d.questions[qi - 1]]; mark(); renderEditor(); } }, "↑") : null;
+    return el("div", { class: "editor-q" },
+      el("div", { class: "head" }, el("span", { class: "qmeta" }, `Pregunta ${qi + 1}`), el("div", { class: "row" }, up, del)),
+      qIn,
+      el("div", { class: "ed-grid" },
+        el("label", { class: "f", for: `ed-k-${q.id}` }, "Tipo de opciones", kind),
+        el("label", { class: "f", for: `ed-p-${q.id}` }, "Puntos", pts)),
+      el("span", { class: "sub" }, q.correct.length > 1
+        ? `Marcaste ${q.correct.length} correctas: tus amigos deberán elegir ${q.correct.length} y cada acierto vale ${ptsLabel(round1(q.points / q.correct.length))}.`
+        : "Marca la casilla de la respuesta correcta. Si marcas varias, tus amigos tendrán que elegir esa cantidad."),
+      q.options.slice(0, shown).map((o, oi) => optionEditor(q, o, oi, mark)),
+      shown < MAX_OPTS ? el("button", { class: "btn ghost small", onclick: () => { q._slots = shown + 1; renderEditor(); } }, `+ Opción ${LETTERS[shown]}`) : null,
+      note);
+  }));
+
+  const suggest = el("div", { class: "suggest" }, SUGGESTIONS.map(s => el("button", { onclick: () => { d.questions.push({ ...newQ(s), _slots: s.slots || 0 }); if (s.kind === "colors") d.questions.at(-1).options.forEach((o, i) => { if (i < 2) o.colors = ["#7FC8E8", "#9ADBC0", "#2E6FA8"]; }); mark(); renderEditor(); } }, `+ ${s.q} · ${ptsLabel(s.points)}`)));
+  const add = el("button", { class: "btn ghost small", id: "ed-add", onclick: () => { d.questions.push(newQ()); mark(); renderEditor(); } }, "+ Pregunta en blanco");
+  const saveBtn = el("button", { class: "btn", id: "ed-save", disabled: !S.dirty, onclick: saveQuiz }, "Guardar y publicar preguntas");
+  const sum = d.questions.reduce((s, q) => s + (q.points || 1), 0);
+
+  const seedBox = !S.quiz ? el("div", { class: "notice" },
+    el("p", {}, "Tu quiz está vacío. Puedes cargar las preguntas y fotos que armaste en Claude con un toque."),
+    el("button", { class: "btn small", id: "seedBtn", style: "margin-top:.6rem", onclick: importSeed }, "Cargar mis preguntas y fotos")) : null;
+  box.append(
+    seedBox,
+    el("div", { style: "display:grid;gap:.4rem" },
+      el("h2", {}, "Mis preguntas"),
+      el("p", { class: "sub" }, "Solo tú ves esta sección. Cada pregunta puede tener hasta 6 opciones de texto, paletas de colores o fotos, una o varias respuestas correctas y su propio puntaje. Marca las correctas y guarda. Si cambias una respuesta o un puntaje, el ranking se recalcula solo.")),
+    el("label", { class: "f", for: "ed-owner" }, "Tu nombre en el título", owner),
+    el("label", { class: "f", for: "ed-intro" }, "Mensaje de bienvenida", intro),
+    list,
+    d.questions.length ? el("p", { class: "sub" }, `Total en juego: ${ptsLabel(sum)}`) : null,
+    el("div", { style: "display:grid;gap:.5rem" }, el("span", { class: "sub" }, "Ideas para empezar (tocas una y solo te falta llenar las opciones):"), suggest),
+    el("div", { class: "row" }, add, saveBtn));
+  if (focusId) { const f = $(focusId); if (f) f.focus(); }
+}
+async function saveQuiz() {
+  const d = S.draft;
+  const clean = d.questions.map(q => {
+    const options = q.options.map(o => ({ text: o.text.trim(), colors: q.kind === "colors" ? o.colors : [], img: q.kind === "image" ? o.img : "" }));
+    let correct = q.correct.filter(i => hasContent(options[i], q.kind));
+    if (!correct.length) correct = [Math.max(0, options.findIndex(o => hasContent(o, q.kind)))];
+    return { id: q.id, q: q.q.trim(), kind: q.kind, points: q.points || 1, options, correct, note: (q.note || "").trim() };
+  }).filter(q => q.q && q.options.filter(o => hasContent(o, q.kind)).length >= 2);
+  const skipped = d.questions.length - clean.length;
+  try {
+    await S.db.doc("quiz/main").set({ owner: d.owner.trim() || "Lore", intro: d.intro.trim(), questions: clean, updatedAt: Date.now() });
+    S.dirty = false; S.draft = null;
+    toast(skipped ? `Guardado. ${skipped} pregunta(s) sin texto o con menos de 2 opciones no se publicaron.` : "Preguntas guardadas y publicadas");
+  } catch { toast("No se pudieron guardar las preguntas. Revisa tu conexión e intenta de nuevo."); }
+}
+
+function applyView() {
+  const panel = S.isOwner && S.view === "panel";
+  $("viewSwitch").hidden = !S.isOwner;
+  $("tabPanel").setAttribute("aria-pressed", String(panel));
+  $("tabPlayer").setAttribute("aria-pressed", String(!panel));
+  $("play").hidden = panel;
+  $("wishes").hidden = !panel;
+  $("eyebrow").textContent = panel ? "Tu panel · solo tú ves esto" : `Un quiz de ${S.quiz?.owner || "Lore"} para sus amigos`;
+}
+for (const b of document.querySelectorAll("#viewSwitch button")) b.addEventListener("click", () => {
+  S.view = b.dataset.view; renderAll(); window.scrollTo({ top: 0 });
+});
+function renderAll() { renderHeader(); renderPlay(); renderRanking(); renderEditor(); applyView(); renderOwnerBtn(); }
+
+async function importSeed() {
+  const btn = $("seedBtn"); if (btn) { btn.disabled = true; btn.textContent = "Cargando…"; }
+  try {
+    const seed = await (await fetch("seed.json")).json();
+    for (const [id, data] of Object.entries(seed.images || {})) await S.db.doc("images/" + id).set({ data });
+    await S.db.doc("quiz/main").set({ ...seed.quiz, updatedAt: Date.now() });
+    toast("Preguntas y fotos cargadas");
+  } catch {
+    toast("No se pudieron cargar. Revisa que seed.json esté junto a index.html.");
+    if (btn) { btn.disabled = false; btn.textContent = "Cargar mis preguntas y fotos"; }
+  }
+}
+
+/* ---------- owner login ---------- */
+function renderOwnerBtn() {
+  const b = $("ownerBtn");
+  b.hidden = !S.uid;
+  b.textContent = S.isOwner ? "Cerrar sesión de mi panel" : `Soy ${S.quiz?.owner || "Lore"} · entrar a mi panel`;
+}
+$("ownerBtn").addEventListener("click", async () => {
+  try {
+    if (S.isOwner) { await signOut(auth); toast("Sesión cerrada"); return; }
+    const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+    if ((cred.user.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
+      await signOut(auth);
+      toast("Esa cuenta no es la dueña del quiz. Si eres tú, entra con el correo que pusiste en config.js.");
+    }
+  } catch (e) {
+    if (e?.code !== "auth/popup-closed-by-user") toast("No se pudo iniciar sesión. Intenta de nuevo.");
+  }
+});
+
+/* ---------- boot ---------- */
+let subscribed = false, wishSub = null;
+function subscribe() {
+  const db = S.db;
+  db.doc("quiz/main").onSnapshot(snap => {
+    S.quiz = snap.exists ? snap.data() : null; S.loaded.quiz = true; renderAll();
+  }, () => { S.loaded.quiz = true; renderAll(); });
+  db.collection("images").onSnapshot(snap => {
+    const m = {}; for (const d of snap.docs) m[d.id] = d.data().data;
+    S.images = m;
+    if (S.step !== "intro") renderPlay();
+    if (!S.dirty) renderEditor();
+  }, () => {});
+  db.collection("results").onSnapshot(snap => {
+    S.results = snap.docs.map(d => ({ id: d.id, ...d.data() })); S.loaded.results = true;
+    renderHeader(); renderRanking(); if (S.step === "intro" || S.step === "done") renderPlay();
+  }, () => {});
+}
+
+function start() {
+  S.db = firebaseDb;
+  renderAll();
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      try { await signInAnonymously(auth); } catch { S.authError = true; S.db = null; renderAll(); }
+      return;
+    }
+    S.uid = user.uid;
+    S.isOwner = !!user.email && user.email.toLowerCase() === OWNER_EMAIL.toLowerCase();
+    if (!S.isOwner) S.view = "player";
+    else S.view = "panel";
+    if (!subscribed) { subscribed = true; subscribe(); }
+    if (S.isOwner && !wishSub) {
+      wishSub = S.db.collection("wishes").onSnapshot(snap => {
+        const m = {}; for (const d of snap.docs) m[d.id] = d.data();
+        S.wishes = m; renderWishes();
+      }, () => {});
+    } else if (!S.isOwner && wishSub) { wishSub(); wishSub = null; S.wishes = {}; }
+    // A new identity starts a fresh attempt view.
+    S.step = "intro"; S.answers = {}; S.idx = 0; S.wish = "";
+    renderAll();
+  });
+}
+start();
+</script>
+</body>
+</html>
