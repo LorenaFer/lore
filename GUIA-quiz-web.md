@@ -26,7 +26,7 @@ Supabase y Vercel son **gratis y no piden tarjeta**.
 1. En el menú de la izquierda entra a **SQL Editor**.
 2. Toca **New query**.
 3. Pega todo este código.
-4. **Cambia `TU_CORREO@gmail.com`** (aparece una sola vez) por tu correo.
+4. Tu correo ya está puesto en el código (lorenavfernandezr@gmail.com).
 5. Toca **Run**. Debe decir *Success. No rows returned*.
 
 ```sql
@@ -44,8 +44,20 @@ alter table wishes  enable row level security;
 -- Quién es la dueña del quiz
 create or replace function public.is_owner() returns boolean
 language sql stable as $$
-  select coalesce(lower(auth.jwt() ->> 'email'), '') = lower('TU_CORREO@gmail.com')
+  select coalesce(lower(auth.jwt() ->> 'email'), '') = lower('lorenavfernandezr@gmail.com')
 $$;
+
+-- Borra reglas anteriores (así este código se puede ejecutar varias veces)
+drop policy if exists "todos leen"     on quiz;
+drop policy if exists "solo dueña"     on quiz;
+drop policy if exists "todos leen"     on images;
+drop policy if exists "solo dueña"     on images;
+drop policy if exists "todos leen"     on results;
+drop policy if exists "guardar el mío" on results;
+drop policy if exists "dueña borra"    on results;
+drop policy if exists "dueña lee"      on wishes;
+drop policy if exists "guardar el mío" on wishes;
+drop policy if exists "dueña borra"    on wishes;
 
 -- Preguntas y fotos: todos las leen, solo tú las cambias
 create policy "todos leen"  on quiz   for select using (true);
@@ -66,7 +78,16 @@ create policy "guardar el mío"   on wishes for insert
 create policy "dueña borra"      on wishes for delete using (is_owner());
 
 -- Actualización en vivo del ranking
-alter publication supabase_realtime add table quiz, images, results, wishes;
+do $$
+declare t text;
+begin
+  foreach t in array array['quiz','images','results','wishes'] loop
+    if not exists (select 1 from pg_publication_tables
+                   where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 ```
 
 ## Paso 3: Activar el inicio de sesión
@@ -90,7 +111,7 @@ alter publication supabase_realtime add table quiz, images, results, wishes;
    - **Project URL**, que se ve como `https://abcdxyz.supabase.co`.
    - La clave **anon public**, un texto largo que empieza con `eyJ...`.
 3. Abre **`quiz-web/config.js`** y pega cada valor donde dice `PEGA_AQUI...`.
-4. Cambia `TU_CORREO@gmail.com` por tu correo y guarda el archivo.
+4. Tu correo ya está puesto. Guarda el archivo.
 
 La clave *anon public* no es secreta y puede ir en la página. Lo que protege tu quiz son las reglas del paso 2. **Nunca uses la clave `service_role`.**
 
