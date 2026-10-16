@@ -221,7 +221,9 @@ label.f { display: grid; gap: .4rem; font-size: var(--s-sm); font-weight: 600; }
 .switch button { border: 0; background: none; cursor: pointer; border-radius: 999px; padding: .5rem 1.1rem; font-weight: 600; font-size: var(--s-sm); color: var(--sea-muted); }
 .switch button[aria-pressed="true"] { background: linear-gradient(120deg, var(--sea-blue), var(--sea-green)); color: var(--sea-surface); }
 .switch:not([hidden]) + .hero { padding-top: 1.5rem; }
-.foot { display: flex; justify-content: center; font-size: var(--s-xs); color: var(--sea-muted); }
+.foot { display: grid; justify-items: center; gap: .75rem; font-size: var(--s-xs); color: var(--sea-muted); }
+.login { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; width: 100%; max-width: 30rem; }
+.login .input { flex: 1 1 11rem; padding: .55rem .8rem; }
 .panel-note { font-size: var(--s-sm); color: var(--sea-muted); }
 
 .fade-in { animation: rise .35s ease both; }
@@ -266,36 +268,62 @@ label.f { display: grid; gap: .4rem; font-size: var(--s-sm); font-weight: 600; }
   </section>
 
   <section class="card" id="editor" hidden></section>
-  <footer class="foot"><button class="peek" id="ownerBtn" hidden>Soy Lore · entrar a mi panel</button></footer>
+  <footer class="foot">
+    <button class="peek" id="ownerBtn" hidden>Soy Lore · entrar a mi panel</button>
+    <form id="loginForm" class="login" hidden>
+      <input class="input" id="loginEmail" type="email" autocomplete="username" placeholder="Tu correo" required>
+      <input class="input" id="loginPass" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
+      <button class="btn small" id="loginBtn" type="submit">Entrar</button>
+    </form>
+  </footer>
 </div>
 <div class="toast" id="toast" hidden></div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, collection, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { firebaseConfig, OWNER_EMAIL } from "./config.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, OWNER_EMAIL } from "./config.js";
 
-const app = initializeApp(firebaseConfig);
-const fs = getFirestore(app);
-const auth = getAuth(app);
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Small wrapper with the same shape the page already uses (doc/collection, get/set/onSnapshot).
-const wrapDoc = (s) => ({ id: s.id, exists: s.exists(), data: () => s.data() });
-const firebaseDb = {
-  doc(p) {
-    const r = doc(fs, p);
+// Small wrapper with the same shape the page already uses: "table/id" documents of {id, data}.
+const fail = (error) => {
+  const e = new Error(error.message);
+  // 42501 = blocked by a security rule, 23505 = row already exists (already played)
+  e.code = error.code === "42501" || error.code === "23505" ? "permission-denied" : error.code;
+  throw e;
+};
+function watch(table, load, onError) {
+  let timer;
+  const run = () => load().catch(e => onError?.(e));
+  run();
+  const ch = sb.channel(`watch-${table}-${Math.random().toString(36).slice(2)}`)
+    .on("postgres_changes", { event: "*", schema: "public", table }, () => { clearTimeout(timer); timer = setTimeout(run, 150); })
+    .subscribe();
+  return () => sb.removeChannel(ch);
+}
+const supabaseDb = {
+  doc(path) {
+    const [table, id] = path.split("/");
+    const get = async () => {
+      const { data, error } = await sb.from(table).select("data").eq("id", id).maybeSingle();
+      if (error) fail(error);
+      return { id, exists: !!data, data: () => data?.data };
+    };
     return {
-      get: async () => wrapDoc(await getDoc(r)),
-      set: (d) => setDoc(r, d),
-      update: (d) => updateDoc(r, d),
-      delete: () => deleteDoc(r),
-      onSnapshot: (next, err) => onSnapshot(r, (s) => next(wrapDoc(s)), err),
+      get,
+      async set(d) { const { error } = await sb.from(table).upsert({ id, data: d }); if (error) fail(error); },
+      async delete() { const { error } = await sb.from(table).delete().eq("id", id); if (error) fail(error); },
+      onSnapshot: (next, onError) => watch(table, async () => next(await get()), onError),
     };
   },
-  collection(p) {
-    const r = collection(fs, p);
-    return { onSnapshot: (next, err) => onSnapshot(r, (s) => next({ docs: s.docs.map(wrapDoc) }), err) };
+  collection(table) {
+    return {
+      onSnapshot: (next, onError) => watch(table, async () => {
+        const { data, error } = await sb.from(table).select("id,data");
+        if (error) fail(error);
+        next({ docs: data.map(r => ({ id: r.id, exists: true, data: () => r.data })) });
+      }, onError),
+    };
   },
 };
 
@@ -815,18 +843,26 @@ function renderOwnerBtn() {
   const b = $("ownerBtn");
   b.hidden = !S.uid;
   b.textContent = S.isOwner ? "Cerrar sesión de mi panel" : `Soy ${S.quiz?.owner || "Lore"} · entrar a mi panel`;
+  if (S.isOwner) $("loginForm").hidden = true;
 }
 $("ownerBtn").addEventListener("click", async () => {
-  try {
-    if (S.isOwner) { await signOut(auth); toast("Sesión cerrada"); return; }
-    const cred = await signInWithPopup(auth, new GoogleAuthProvider());
-    if ((cred.user.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
-      await signOut(auth);
-      toast("Esa cuenta no es la dueña del quiz. Si eres tú, entra con el correo que pusiste en config.js.");
-    }
-  } catch (e) {
-    if (e?.code !== "auth/popup-closed-by-user") toast("No se pudo iniciar sesión. Intenta de nuevo.");
+  if (S.isOwner) { await sb.auth.signOut(); toast("Sesión cerrada"); return; }
+  const f = $("loginForm"); f.hidden = !f.hidden;
+  if (!f.hidden) $("loginEmail").focus();
+});
+$("loginForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const btn = $("loginBtn"); btn.disabled = true;
+  const email = $("loginEmail").value.trim();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: $("loginPass").value });
+  btn.disabled = false;
+  if (error) { toast("Correo o contraseña incorrectos."); return; }
+  if ((data.user?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
+    await sb.auth.signOut();
+    toast("Esa cuenta no es la dueña del quiz.");
+    return;
   }
+  $("loginPass").value = "";
 });
 
 /* ---------- boot ---------- */
@@ -848,28 +884,36 @@ function subscribe() {
   }, () => {});
 }
 
-function start() {
-  S.db = firebaseDb;
+function applyUser(user) {
+  S.uid = user.id;
+  S.isOwner = !!user.email && user.email.toLowerCase() === OWNER_EMAIL.toLowerCase();
+  S.view = S.isOwner ? "panel" : "player";
+  if (!subscribed) { subscribed = true; subscribe(); }
+  if (S.isOwner && !wishSub) {
+    wishSub = S.db.collection("wishes").onSnapshot(snap => {
+      const m = {}; for (const d of snap.docs) m[d.id] = d.data();
+      S.wishes = m; renderWishes();
+    }, () => {});
+  } else if (!S.isOwner && wishSub) { wishSub(); wishSub = null; S.wishes = {}; }
+  // A new identity starts a fresh attempt view.
+  S.step = "intro"; S.answers = {}; S.idx = 0; S.wish = "";
   renderAll();
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      try { await signInAnonymously(auth); } catch { S.authError = true; S.db = null; renderAll(); }
-      return;
-    }
-    S.uid = user.uid;
-    S.isOwner = !!user.email && user.email.toLowerCase() === OWNER_EMAIL.toLowerCase();
-    if (!S.isOwner) S.view = "player";
-    else S.view = "panel";
-    if (!subscribed) { subscribed = true; subscribe(); }
-    if (S.isOwner && !wishSub) {
-      wishSub = S.db.collection("wishes").onSnapshot(snap => {
-        const m = {}; for (const d of snap.docs) m[d.id] = d.data();
-        S.wishes = m; renderWishes();
-      }, () => {});
-    } else if (!S.isOwner && wishSub) { wishSub(); wishSub = null; S.wishes = {}; }
-    // A new identity starts a fresh attempt view.
-    S.step = "intro"; S.answers = {}; S.idx = 0; S.wish = "";
-    renderAll();
+}
+
+function start() {
+  S.db = supabaseDb;
+  renderAll();
+  sb.auth.onAuthStateChange((event, session) => {
+    // Supabase asks not to await its own calls inside this callback.
+    setTimeout(async () => {
+      if (!session) {
+        const { error } = await sb.auth.signInAnonymously();
+        if (error) { S.authError = true; S.db = null; renderAll(); }
+        return;
+      }
+      if (session.user.id === S.uid) return;   // token refresh, same person
+      applyUser(session.user);
+    }, 0);
   });
 }
 start();

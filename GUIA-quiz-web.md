@@ -1,112 +1,134 @@
-# Cómo publicar tu quiz en internet
+# Cómo publicar tu quiz en internet (Supabase + Vercel)
 
-Tu quiz está en la carpeta **`quiz-web`**. Tiene 3 archivos:
+Tu quiz está en la carpeta **`quiz-web`**:
 
 - `index.html`: la página.
-- `config.js`: los datos de tu Firebase (los llenas en el paso 3).
+- `config.js`: los datos de tu Supabase (los llenas en el paso 4).
 - `seed.json`: tus 10 preguntas y fotos, para cargarlas con un toque.
 
-Lo haces una sola vez y toma unos 20 a 30 minutos.
+Supabase y Vercel son **gratis y no piden tarjeta**.
 
 ---
 
-## Paso 1: Crear tu proyecto en Firebase
+## Paso 1: Crear tu proyecto en Supabase
 
-1. Entra a **https://console.firebase.google.com** con tu cuenta de Google.
-2. Toca **"Crear un proyecto"**. Ponle un nombre, por ejemplo `quiz-lore`.
-3. Cuando te pregunte por Google Analytics, **desactívalo**, porque no lo necesitas. Toca **Crear proyecto**.
+1. Entra a **https://supabase.com** y toca **Start your project**.
+2. Entra con **GitHub**, la misma cuenta que usas en Vercel.
+3. Toca **New project**:
+   - **Name:** `quiz-lore`
+   - **Database Password:** toca **Generate a password** y guárdala en algún lado. Casi nunca la vas a necesitar.
+   - **Region:** la más cercana, por ejemplo *South America (São Paulo)* o *East US*.
+   - **Plan:** Free.
+4. Toca **Create new project** y espera 1 o 2 minutos mientras se prepara.
 
-## Paso 2: Activar la base de datos y el inicio de sesión
+## Paso 2: Crear la base de datos (copiar y pegar)
 
-**Base de datos:**
-1. En el menú de la izquierda: **Compilación → Firestore Database → Crear base de datos**.
-2. Elige una ubicación cercana, por ejemplo `southamerica-east1` o `us-east1`.
-3. Elige **"Iniciar en modo de producción"** y toca Crear.
-4. Ve a la pestaña **Reglas**, borra todo lo que hay y pega esto:
+1. En el menú de la izquierda entra a **SQL Editor**.
+2. Toca **New query**.
+3. Pega todo este código.
+4. **Cambia `TU_CORREO@gmail.com`** (aparece una sola vez) por tu correo.
+5. Toca **Run**. Debe decir *Success. No rows returned*.
 
+```sql
+-- Tablas: cada fila es un documento {id, data}
+create table if not exists quiz    (id text primary key, data jsonb not null);
+create table if not exists images  (id text primary key, data jsonb not null);
+create table if not exists results (id text primary key, data jsonb not null);
+create table if not exists wishes  (id text primary key, data jsonb not null);
+
+alter table quiz    enable row level security;
+alter table images  enable row level security;
+alter table results enable row level security;
+alter table wishes  enable row level security;
+
+-- Quién es la dueña del quiz
+create or replace function public.is_owner() returns boolean
+language sql stable as $$
+  select coalesce(lower(auth.jwt() ->> 'email'), '') = lower('TU_CORREO@gmail.com')
+$$;
+
+-- Preguntas y fotos: todos las leen, solo tú las cambias
+create policy "todos leen"  on quiz   for select using (true);
+create policy "solo dueña"  on quiz   for all using (is_owner()) with check (is_owner());
+create policy "todos leen"  on images for select using (true);
+create policy "solo dueña"  on images for all using (is_owner()) with check (is_owner());
+
+-- Resultados: todos ven el ranking, cada quien guarda solo el suyo y una sola vez
+create policy "todos leen"       on results for select using (true);
+create policy "guardar el mío"   on results for insert
+  with check (id = auth.uid()::text and length(data->>'name') between 1 and 40);
+create policy "dueña borra"      on results for delete using (is_owner());
+
+-- Deseos: cada quien deja el suyo, solo tú los lees
+create policy "dueña lee"        on wishes for select using (is_owner());
+create policy "guardar el mío"   on wishes for insert
+  with check (id = auth.uid()::text and length(coalesce(data->>'wish','')) <= 600);
+create policy "dueña borra"      on wishes for delete using (is_owner());
+
+-- Actualización en vivo del ranking
+alter publication supabase_realtime add table quiz, images, results, wishes;
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function isOwner() {
-      return request.auth != null
-        && request.auth.token.email == "TU_CORREO@gmail.com"
-        && request.auth.token.email_verified;
-    }
-    match /quiz/{id}   { allow read: if true; allow write: if isOwner(); }
-    match /images/{id} { allow read: if true; allow write: if isOwner(); }
-    match /results/{uid} {
-      allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['name', 'answers', 'at'])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 40;
-      allow delete: if isOwner();
-    }
-    match /wishes/{uid} {
-      allow read, delete: if isOwner();
-      allow create: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.wish is string
-        && request.resource.data.wish.size() <= 600;
-    }
-  }
-}
+
+## Paso 3: Activar el inicio de sesión
+
+**Para tus amigos (sin cuenta):**
+1. Entra a **Authentication → Sign In / Providers**. En algunas versiones está en *Authentication → Settings*.
+2. Activa **Allow anonymous sign-ins** y guarda.
+
+**Para ti (tu panel):**
+1. Entra a **Authentication → Users → Add user → Create new user**.
+2. Escribe **tu correo** (el mismo del SQL) y una **contraseña** que recuerdes.
+3. Marca **Auto Confirm User** y toca **Create user**.
+
+**Para que puedan jugar muchos al mismo tiempo,** por ejemplo en tu fiesta con el mismo wifi:
+- En **Authentication → Rate Limits**, sube *"Rate limit for anonymous users"* a **300** y guarda.
+
+## Paso 4: Conectar la página con Supabase
+
+1. Entra a **Project Settings** (el engranaje ⚙️) **→ API**. En algunas versiones se llama *Data API* o *API Keys*.
+2. Copia:
+   - **Project URL**, que se ve como `https://abcdxyz.supabase.co`.
+   - La clave **anon public**, un texto largo que empieza con `eyJ...`.
+3. Abre **`quiz-web/config.js`** y pega cada valor donde dice `PEGA_AQUI...`.
+4. Cambia `TU_CORREO@gmail.com` por tu correo y guarda el archivo.
+
+La clave *anon public* no es secreta y puede ir en la página. Lo que protege tu quiz son las reglas del paso 2. **Nunca uses la clave `service_role`.**
+
+## Paso 5: Subir los cambios y publicar en Vercel
+
+En la terminal:
+
+```bash
+cd ~/Desktop/lore
+git add .
+git commit -m "Conectar Supabase"
+git push
 ```
 
-5. Cambia **`TU_CORREO@gmail.com`** por el correo de Google con el que vas a entrar a tu panel, y toca **Publicar**.
+**En Vercel (solo la primera vez):**
+1. Entra a tu proyecto **lore → Settings → Build and Deployment**.
+2. En **Root Directory** toca **Edit**, elige **`quiz-web`** y guarda.
+3. Ve a **Deployments**, toca los tres puntos **⋯** del último deploy y elige **Redeploy**.
 
-**Inicio de sesión:**
-1. En el menú: **Compilación → Authentication → Comenzar**.
-2. En la pestaña **Método de acceso**, activa dos opciones:
-   - **Anónimo**: así tus amigos juegan sin crear cuenta.
-   - **Google**: así entras tú a tu panel. Elige tu correo como "correo de asistencia" y guarda.
+Tu link: **https://lore-eta-nine.vercel.app**
 
-## Paso 3: Conectar la página con Firebase
-
-1. Toca el engranaje ⚙️ junto a "Descripción general del proyecto" y entra a **Configuración del proyecto**.
-2. Baja hasta **"Tus apps"** y toca el ícono **`</>`** (Web).
-3. Ponle un nombre, por ejemplo `quiz`. **No marques** Firebase Hosting. Toca **Registrar app**.
-4. Te aparece un código con `const firebaseConfig = { ... }`. Copia los valores de `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId` y `appId`.
-5. Abre **`quiz-web/config.js`** y reemplaza cada `PEGA_AQUI` por su valor.
-6. En ese mismo archivo, cambia **`TU_CORREO@gmail.com`** por el mismo correo que pusiste en las reglas. Guarda.
-
-Estos datos de Firebase no son secretos y pueden estar en la página. Lo que protege tu quiz son las reglas del paso 2.
-
-## Paso 4: Publicar la página con Vercel
-
-**4a. GitHub:** tu quiz ya está en tu repositorio **https://github.com/LorenaFer/lore**, dentro de la carpeta `quiz-web`. Cuando llenes `config.js` (paso 3), sube ese cambio a GitHub. Puedes pedírmelo, o en GitHub entrar a `quiz-web/config.js`, tocar el lápiz ✏️, pegar tus datos y tocar **Commit changes**.
-
-**4b. Conectar con Vercel**
-1. Entra a **https://vercel.com** y toca **Sign Up → Continue with GitHub**. Elige el plan **Hobby**, que es gratis.
-2. Toca **Add New… → Project**.
-3. Busca tu repositorio `lore` y toca **Import**. Si no aparece, toca "Adjust GitHub App Permissions" y dale acceso.
-4. En **Framework Preset** elige **Other**.
-5. En **Root Directory** toca **Edit** y elige la carpeta **`quiz-web`**. Esto es importante, porque ahí está la página.
-6. Toca **Deploy**. En unos segundos te da tu link, por ejemplo `https://lore.vercel.app`.
-
-Si quieres otro nombre en el link: **Settings → Domains → Edit** sobre el dominio `.vercel.app`.
-
-**Último ajuste en Firebase,** para que funcione tu inicio de sesión con Google:
-- Ve a **Authentication → Configuración → Dominios autorizados → Agregar dominio** y pega tu dominio de Vercel, por ejemplo `quiz-lore.vercel.app`, sin `https://`.
-- Si cambias el nombre del dominio en Vercel, agrega también el nuevo.
-
-## Paso 5: Cargar tus preguntas
+## Paso 6: Cargar tus preguntas
 
 1. Abre tu link.
-2. Abajo de todo toca **"Soy Lore · entrar a mi panel"** y entra con tu correo.
-3. Arriba te aparece **"Cargar mis preguntas y fotos"**. Tócalo y listo: tus 10 preguntas con sus fotos quedan cargadas.
-4. Cambia a **"Vista de amigos"** y juega una vez para probar. Después borras tu resultado con la **×** del ranking.
+2. Abajo de todo toca **"Soy Lore · entrar a mi panel"**, escribe tu correo y contraseña, y toca **Entrar**.
+3. Arriba te aparece **"Cargar mis preguntas y fotos"**. Tócalo y tus 10 preguntas con fotos quedan cargadas.
+4. Cambia a **"Vista de amigos"** y juega una vez para probar. Después borra tu resultado con la **×** del ranking.
+5. **Avísale a Claude para borrar `seed.json`** del repositorio, así nadie puede ver las respuestas en ese archivo.
 
-## Paso 6: Compartir 🎉
+## Paso 7: Compartir 🎉
 
-Manda el link a tus amigos. Ellos solo lo abren y juegan, sin cuenta.
+Manda el link a tus amigos. Ellos solo lo abren y juegan.
 
 ---
 
 ### Bueno saber
 
+- **Supabase pausa los proyectos gratis después de 7 días sin uso.** Si pasa, la página no carga las preguntas. Entra a supabase.com, abre tu proyecto y toca **Restore**. Tus datos no se pierden. Mientras tus amigos estén jugando, no se pausa.
 - **Un intento por persona:** cada dispositivo puede jugar una vez. Si alguien borra los datos de su navegador o juega desde otro celular, podría jugar de nuevo. Si ves algo raro, borra ese resultado con la ×.
 - **Tus amigos no ven** las respuestas correctas, los deseos ni tu panel.
-- **Si cambias algo de la página** (no las preguntas, sino el diseño o el código), sube el archivo nuevo a GitHub con **Add file → Upload files**. Vercel actualiza la página sola en menos de un minuto. Las preguntas, los resultados y los deseos no se pierden, porque viven en Firebase.
-- **Gratis:** el plan gratuito de Firebase y el plan Hobby de Vercel alcanzan de sobra para un quiz entre amigos.
+- **Si cambias el diseño o el código,** súbelo con `git add .`, `git commit -m "..."` y `git push`, y Vercel se actualiza solo. Las preguntas que cambies desde tu panel no necesitan esto.
