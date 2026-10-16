@@ -300,7 +300,7 @@ const el = (tag, attrs = {}, ...kids) => {
     else if (v === true) n.setAttribute(k, "");
     else if (v !== false && v != null) n.setAttribute(k, v);
   }
-  for (const k of kids.flat()) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+  for (const k of kids.flat(Infinity)) if (k != null && k !== false) n.append(k.nodeType ? k : document.createTextNode(String(k)));
   return n;
 };
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2800); }
